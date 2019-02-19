@@ -4,8 +4,11 @@ import (
     "fmt"
     "flag"
     "io/ioutil"
-    "io"
+    "os"
+    "bytes"
     "image"
+    "github.com/mattn/go-sixel"
+    _"image/png"
 )
 
 func getFileNames(dirname string) ([]string, error) {
@@ -15,12 +18,21 @@ func getFileNames(dirname string) ([]string, error) {
     }
     var filenames []string
     for _, f := range files {
-        filenames = append(filenames, f.Name())
+        path := fmt.Sprintf("%s%s", dirname, f.Name())
+        filenames = append(filenames, path)
     }
     return filenames, nil
 }
 
-func decodeImages(files []io.Reader) ([]image.Image, error) {
+func decodeImages(filenames []string) ([]image.Image, error) {
+    var files []*os.File
+    for _, f := range filenames {
+        file, err := os.Open(f)
+        if err != nil {
+            return nil, err
+        }
+        files = append(files, file)
+    }
     var images []image.Image
     for _, f := range files {
         img, _, err := image.Decode(f)
@@ -41,12 +53,48 @@ func main() {
     if err != nil {
         panic(err)
     }
-    fmt.Println(files)
-
 
     images, err := decodeImages(files)
     if err != nil {
         panic(err)
     }
-    fmt.Println(images)
+    pagenum := len(images)
+
+    var writer []*bytes.Buffer
+    for i := 0; i < pagenum; i++ {
+        writer = append(writer, new(bytes.Buffer))
+    }
+
+    for i, img := range images {
+        sixel.NewEncoder(writer[i]).Encode(img)
+        fmt.Printf("\rSlide loading... %d/%d", i, pagenum)
+    }
+    fmt.Println("")
+    fmt.Println("Complete!!")
+
+    fmt.Println(string(writer[0].Bytes()))
+
+    currpage := 0
+    var command string
+    FOR_LABEL:
+    for {
+        fmt.Scan(&command)
+
+        switch command {
+            case ":q", "exit":
+                break FOR_LABEL
+
+            case "next", "l":
+                if currpage < pagenum-1 {
+                    currpage += 1
+                    fmt.Println(string(writer[currpage].Bytes()))
+                }
+
+            case "back", "h":
+                if currpage > 0 {
+                    currpage -= 1
+                    fmt.Println(string(writer[currpage].Bytes()))
+                }
+        }
+    }
 }

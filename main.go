@@ -6,8 +6,11 @@ import (
     "io/ioutil"
     "os"
     "bytes"
+    "math"
+    "strconv"
     "image"
     "github.com/mattn/go-sixel"
+    "github.com/nfnt/resize"
     _"image/png"
 )
 
@@ -18,7 +21,7 @@ func getFileNames(dirname string) ([]string, error) {
     }
     var filenames []string
     for _, f := range files {
-        path := fmt.Sprintf("%s%s", dirname, f.Name())
+        path := fmt.Sprintf("%s/%s", dirname, f.Name())
         filenames = append(filenames, path)
     }
     return filenames, nil
@@ -49,6 +52,15 @@ func main() {
     args := flag.Args()
     dirname := args[0]
 
+    maxwidth := uint(400)
+    if len(args) >= 2 {
+        num, err := strconv.Atoi(args[1])
+        if err != nil {
+            panic(err)
+        }
+        maxwidth = uint(num)
+    }
+
     files, err := getFileNames(dirname)
     if err != nil {
         panic(err)
@@ -66,8 +78,9 @@ func main() {
     }
 
     for i, img := range images {
+        img = resize.Thumbnail(maxwidth, math.MaxUint32, img, resize.NearestNeighbor)
         sixel.NewEncoder(writer[i]).Encode(img)
-        fmt.Printf("\rSlide loading... %d/%d", i, pagenum)
+        fmt.Printf("\rSlide loading... %d/%d", i+1, pagenum)
     }
     fmt.Println("")
     fmt.Println("Complete!!")

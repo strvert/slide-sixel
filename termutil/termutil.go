@@ -92,3 +92,8 @@ func (ctr *CtrlSeqs) GetWindowSize() (uint, uint, error) {
     term.LoadBefore()
     return uint(height), uint(width), nil
 }
+
+func (ctr *CtrlSeqs) ClearScreen() {
+    fmt.Print("\x1b[2J")
+    fmt.Print("\x1b[H")
+}

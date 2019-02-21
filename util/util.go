@@ -106,9 +106,14 @@ func LoadPages(filenames []string, dirname string, width uint, save bool) ([]*by
             pages = append(pages, new(bytes.Buffer))
         }
 
-        if err := os.Mkdir(dirname + "/sixel_image", 0777); err != nil {
-            return nil, 0, err
+        path := dirname + "/sixel_image"
+
+        if _, err := os.Stat(path); err != nil {
+            if err := os.Mkdir(path, 0777); err != nil {
+                return nil, 0, err
+            }
         }
+
 
         for i, img := range images {
             height := uint((float64(width)/float64(sizes[i][1]))*float64(sizes[i][0]))
@@ -124,6 +129,8 @@ func LoadPages(filenames []string, dirname string, width uint, save bool) ([]*by
 
             fmt.Printf("\rSlide loading... %d/%d", i+1, pagenum)
         }
+        fmt.Println("")
+        fmt.Println("Complete!!")
     }
     return pages, pagenum, nil
 }

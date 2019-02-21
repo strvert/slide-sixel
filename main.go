@@ -4,6 +4,7 @@ import (
     "fmt"
     "flag"
     "strconv"
+    "os"
 
     "./termutil"
     "./rw"
@@ -11,22 +12,28 @@ import (
 )
 
 func main() {
+    var (
+        dirname string
+        sixupdate bool
+        slidewidth uint
+    )
+    flag.StringVar(&dirname, "d", "0", "slide directory")
+    flag.BoolVar(&sixupdate, "u", false, "update saves for six image")
+    flag.UintVar(&slidewidth, "s", 0, "set width for slide width")
     flag.Parse()
-    args := flag.Args()
-    dirname := args[0]
+    if dirname == "0" {
+        fmt.Println(fmt.Errorf("Please set slide directory."))
+        os.Exit(1)
+    }
 
-    cs := new(termutil.CtrlSeqs)
+    var cs termutil.CtrlSeqs
 
     _, width, err := cs.GetWindowSize()
     if err != nil {
         panic(err)
     }
-    if len(args) >= 2 {
-        num, err := strconv.Atoi(args[1])
-        if err != nil {
-            panic(err)
-        }
-        width = uint(num)
+    if slidewidth != 0 {
+        width = uint(slidewidth)
     }
 
     filenames, save, err := util.GetFileNames(dirname)
@@ -34,14 +41,13 @@ func main() {
         panic(err)
     }
 
+    save = save && !sixupdate
     pages, pagenum, err := util.LoadPages(filenames, dirname, width, save)
     if err != nil {
         panic(err)
     }
 
-    fmt.Println("")
-    fmt.Println("Complete!!")
-
+    cs.ClearScreen()
     fmt.Println(string(pages[0].Bytes()))
 
     currpage := 0
@@ -81,4 +87,6 @@ func main() {
                 }
         }
     }
+
+    cs.ClearScreen()
 }

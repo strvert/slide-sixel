@@ -34,7 +34,7 @@ func main() {
     }
     if slidewidth != 0 {
         width = uint(slidewidth)
-        sixupdate := !true
+        sixupdate = !true
     }
 
     filenames, save, err := util.GetFileNames(dirname)

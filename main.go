@@ -9,9 +9,13 @@ import (
     "math"
     "strconv"
     "image"
+    _"image/png"
+
     "github.com/mattn/go-sixel"
     "github.com/nfnt/resize"
-    _"image/png"
+
+    "./termutil"
+    "./rw"
 )
 
 func getFileNames(dirname string) ([]string, error) {
@@ -87,14 +91,20 @@ func main() {
 
     fmt.Println(string(writer[0].Bytes()))
 
+    var term termutil.Termutil
+    term.Init()
+    term.SetCanon()
+    defer term.SetUncanon()
+
     currpage := 0
-    var command string
     FOR_LABEL:
     for {
-        fmt.Scan(&command)
-
-        switch command {
-            case ":q", "exit":
+        commands, err := rw.ScanCommand()
+        if err != nil {
+            panic(err)
+        }
+        switch commands[0] {
+            case "exit", "q":
                 break FOR_LABEL
 
             case "next", "l":
@@ -107,6 +117,19 @@ func main() {
                 if currpage > 0 {
                     currpage -= 1
                     fmt.Println(string(writer[currpage].Bytes()))
+                }
+
+            case "jmp", "j":
+                page, err := strconv.Atoi(commands[1])
+                if err != nil {
+                    panic(err)
+                }
+                page = page-1
+                if page < pagenum && page >= 0 {
+                    fmt.Println(string(writer[page].Bytes()))
+                    currpage = page
+                } else {
+                    fmt.Println("That page is out range.")
                 }
         }
     }

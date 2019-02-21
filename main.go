@@ -9,6 +9,7 @@ import (
     "strconv"
     "image"
     _"image/png"
+    _"image/jpeg"
 
     "github.com/mattn/go-sixel"
     "github.com/nfnt/resize"
@@ -17,17 +18,25 @@ import (
     "./rw"
 )
 
-func getFileNames(dirname string) ([]string, error) {
+func getFileNames(dirname string) ([]string, bool, error) {
     files, err := ioutil.ReadDir(dirname)
+    save := false
     if err != nil {
-        return nil, err
+        return nil, false, err
     }
     var filenames []string
     for _, f := range files {
-        path := fmt.Sprintf("%s/%s", dirname, f.Name())
-        filenames = append(filenames, path)
+        name := f.Name()
+        if f.IsDir() {
+            if name == "sixel_image" {
+                save = true
+            }
+        } else {
+            path := fmt.Sprintf("%s/%s", dirname, name)
+            filenames = append(filenames, path)
+        }
     }
-    return filenames, nil
+    return filenames, save, nil
 }
 
 func decodeImages(filenames []string) ([]image.Image, [][2]uint , error) {
@@ -64,8 +73,6 @@ func decodeImages(filenames []string) ([]image.Image, [][2]uint , error) {
 }
 
 func main() {
-    var term termutil.Termutil
-
     flag.Parse()
     args := flag.Args()
     dirname := args[0]
@@ -84,37 +91,73 @@ func main() {
         width = uint(num)
     }
 
-    filenames, err := getFileNames(dirname)
+    filenames, save, err := getFileNames(dirname)
     if err != nil {
         panic(err)
     }
 
-    images, sizes, err := decodeImages(filenames)
-    if err != nil {
-        panic(err)
-    }
-    pagenum := len(images)
+    var pages []*bytes.Buffer
+    pagenum := 0
+    if save {
+        filenames, save, err = getFileNames(dirname + "/sixel_image")
+        if err != nil {
+            panic(err)
+        }
+        pagenum = len(filenames)
+        for i := 0; i < pagenum; i++ {
+            pages = append(pages, new(bytes.Buffer))
+            f, err := os.Open(filenames[i])
+            if err != nil {
+                panic(err)
+            }
+            defer f.Close()
 
-    var writer []*bytes.Buffer
-    for i := 0; i < pagenum; i++ {
-        writer = append(writer, new(bytes.Buffer))
-    }
+            stat, err := f.Stat()
+            if err != nil {
+                panic(err)
+            }
+            buf := make([]byte, stat.Size())
+            f.Read(buf)
+            _, err = pages[i].Write(buf)
+            if err != nil {
+                panic(err)
+            }
+        }
+    } else {
+        images, sizes, err := decodeImages(filenames)
+        if err != nil {
+            panic(err)
+        }
 
-    for i, img := range images {
-        height := uint((float64(width)/float64(sizes[i][1]))*float64(sizes[i][0]))
-        img = resize.Resize(width, height, img, resize.NearestNeighbor)
-        sixel.NewEncoder(writer[i]).Encode(img)
-        fmt.Printf("\rSlide loading... %d/%d", i+1, pagenum)
+        pagenum = len(images)
+        for i := 0; i < pagenum; i++ {
+            pages = append(pages, new(bytes.Buffer))
+        }
+
+        if err := os.Mkdir(dirname + "/sixel_image", 0777); err != nil {
+            panic(err)
+        }
+
+        for i, img := range images {
+            height := uint((float64(width)/float64(sizes[i][1]))*float64(sizes[i][0]))
+            img = resize.Resize(width, height, img, resize.NearestNeighbor)
+            sixel.NewEncoder(pages[i]).Encode(img)
+            name := fmt.Sprintf("%s/sixel_image/%d.six", dirname, i)
+            newfile, err := os.Create(name)
+            if err != nil {
+                panic(err)
+            }
+            defer newfile.Close()
+            newfile.Write(pages[i].Bytes())
+
+            fmt.Printf("\rSlide loading... %d/%d", i+1, pagenum)
+        }
     }
+    fmt.Println(filenames)
     fmt.Println("")
     fmt.Println("Complete!!")
 
-    fmt.Println(string(writer[0].Bytes()))
-
-    term.Init()
-    if err := term.SetCanon(); err != nil {
-        panic(err)
-    }
+    fmt.Println(string(pages[0].Bytes()))
 
     currpage := 0
     FOR_LABEL:
@@ -130,13 +173,13 @@ func main() {
             case "next", "l":
                 if currpage < pagenum-1 {
                     currpage += 1
-                    fmt.Println(string(writer[currpage].Bytes()))
+                    fmt.Println(string(pages[currpage].Bytes()))
                 }
 
             case "back", "h":
                 if currpage > 0 {
                     currpage -= 1
-                    fmt.Println(string(writer[currpage].Bytes()))
+                    fmt.Println(string(pages[currpage].Bytes()))
                 }
 
             case "jmp", "j":
@@ -146,15 +189,11 @@ func main() {
                 }
                 page = page-1
                 if page < pagenum && page >= 0 {
-                    fmt.Println(string(writer[page].Bytes()))
+                    fmt.Println(string(pages[page].Bytes()))
                     currpage = page
                 } else {
                     fmt.Println("That page is out range.")
                 }
         }
-    }
-
-    if err := term.SetUncanon(); err != nil {
-        panic(err)
     }
 }

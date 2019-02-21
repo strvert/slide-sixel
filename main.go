@@ -3,11 +3,10 @@ package main
 import (
     "fmt"
     "flag"
-    "strconv"
     "os"
+    "bufio"
 
     "./termutil"
-    "./rw"
     "./util"
 )
 
@@ -49,42 +48,37 @@ func main() {
     }
 
     cs.ClearScreen()
-    fmt.Println(string(pages[0].Bytes()))
+    fmt.Print(string(pages[0].Bytes()))
+
+    var term termutil.Termutil
+    term.Init()
+    defer term.LoadBefore()
+    term.SetCanon()
+    term.SetEcho(true)
+    reader := bufio.NewReader(os.Stdin)
 
     currpage := 0
     FOR_LABEL:
     for {
-        commands, err := rw.ScanCommand()
+        ch, err := reader.ReadByte()
         if err != nil {
             panic(err)
         }
-        switch commands[0] {
-            case "exit", "q":
+
+        switch string(ch) {
+            case "q":
                 break FOR_LABEL
 
-            case "next", "l":
+            case "l":
                 if currpage < pagenum-1 {
                     currpage += 1
-                    fmt.Println(string(pages[currpage].Bytes()))
+                    fmt.Print(string(pages[currpage].Bytes()))
                 }
 
-            case "back", "h":
+            case "h":
                 if currpage > 0 {
                     currpage -= 1
-                    fmt.Println(string(pages[currpage].Bytes()))
-                }
-
-            case "jmp", "j":
-                page, err := strconv.Atoi(commands[1])
-                if err != nil {
-                    panic(err)
-                }
-                page = page-1
-                if page < pagenum && page >= 0 {
-                    fmt.Println(string(pages[page].Bytes()))
-                    currpage = page
-                } else {
-                    fmt.Println("That page is out range.")
+                    fmt.Print(string(pages[currpage].Bytes()))
                 }
         }
     }

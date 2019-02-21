@@ -51,9 +51,9 @@ func (term *Termutil) SetEcho(state bool) error {
     }
 
     if state {
-        term.curterm.LFlag ^= termios.ECHO
-    } else {
         term.curterm.LFlag &= termios.ECHO
+    } else {
+        term.curterm.LFlag ^= termios.ECHO
     }
 
     if err := term.curterm.SetAttr(termios.Stdin, termios.TCSANOW); err != nil {
@@ -70,7 +70,7 @@ func (ctr *CtrlSeqs) GetWindowSize() (uint, uint, error) {
     var term Termutil
     term.Init()
     term.SetCanon()
-    term.SetEcho(false)
+    term.SetEcho(true)
 
     fmt.Print("\x1b[14;;t")
     input, err := rw.ReadUntil('t')

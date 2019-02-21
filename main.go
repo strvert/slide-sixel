@@ -6,7 +6,6 @@ import (
     "io/ioutil"
     "os"
     "bytes"
-    "math"
     "strconv"
     "image"
     _"image/png"
@@ -31,46 +30,66 @@ func getFileNames(dirname string) ([]string, error) {
     return filenames, nil
 }
 
-func decodeImages(filenames []string) ([]image.Image, error) {
+func decodeImages(filenames []string) ([]image.Image, [][2]uint , error) {
     var files []*os.File
+    var images []image.Image
+    var sizes [][2]uint
     for _, f := range filenames {
         file, err := os.Open(f)
         if err != nil {
-            return nil, err
+            return nil, [][2]uint{{0, 0}}, err
         }
+        defer file.Close()
         files = append(files, file)
-    }
-    var images []image.Image
-    for _, f := range files {
-        img, _, err := image.Decode(f)
+
+        img, _, err := image.Decode(file)
         if err != nil {
-            return nil, err
+            return nil, [][2]uint{{0, 0}}, err
         }
         images = append(images, img)
+
+        file, err = os.Open(f)
+        if err != nil {
+            return nil, [][2]uint{{0, 0}}, err
+        }
+        defer file.Close()
+
+        imgconf, _, err := image.DecodeConfig(file)
+        if err != nil {
+            return nil, [][2]uint{{0, 0}}, err
+        }
+        sizes = append(sizes, [2]uint{uint(imgconf.Height), uint(imgconf.Width)})
     }
-    return images, nil
+    return images, sizes, nil
 }
 
 func main() {
+    var term termutil.Termutil
+
     flag.Parse()
     args := flag.Args()
     dirname := args[0]
 
-    maxwidth := uint(400)
+    cs := new(termutil.CtrlSeqs)
+
+    _, width, err := cs.GetWindowSize()
+    if err != nil {
+        panic(err)
+    }
     if len(args) >= 2 {
         num, err := strconv.Atoi(args[1])
         if err != nil {
             panic(err)
         }
-        maxwidth = uint(num)
+        width = uint(num)
     }
 
-    files, err := getFileNames(dirname)
+    filenames, err := getFileNames(dirname)
     if err != nil {
         panic(err)
     }
 
-    images, err := decodeImages(files)
+    images, sizes, err := decodeImages(filenames)
     if err != nil {
         panic(err)
     }
@@ -82,7 +101,8 @@ func main() {
     }
 
     for i, img := range images {
-        img = resize.Thumbnail(maxwidth, math.MaxUint32, img, resize.NearestNeighbor)
+        height := uint((float64(width)/float64(sizes[i][1]))*float64(sizes[i][0]))
+        img = resize.Resize(width, height, img, resize.NearestNeighbor)
         sixel.NewEncoder(writer[i]).Encode(img)
         fmt.Printf("\rSlide loading... %d/%d", i+1, pagenum)
     }
@@ -91,10 +111,10 @@ func main() {
 
     fmt.Println(string(writer[0].Bytes()))
 
-    var term termutil.Termutil
     term.Init()
-    term.SetCanon()
-    defer term.SetUncanon()
+    if err := term.SetCanon(); err != nil {
+        panic(err)
+    }
 
     currpage := 0
     FOR_LABEL:
@@ -132,5 +152,9 @@ func main() {
                     fmt.Println("That page is out range.")
                 }
         }
+    }
+
+    if err := term.SetUncanon(); err != nil {
+        panic(err)
     }
 }

@@ -4,8 +4,6 @@ import (
     "fmt"
     "flag"
     "strconv"
-    _"image/png"
-    _"image/jpeg"
 
     "./termutil"
     "./rw"

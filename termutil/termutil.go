@@ -51,7 +51,7 @@ func (term *Termutil) SetEcho(state bool) error {
     }
 
     if state {
-        term.curterm.LFlag &= termios.ECHO
+        term.curterm.LFlag &^= termios.ECHO
     } else {
         term.curterm.LFlag ^= termios.ECHO
     }

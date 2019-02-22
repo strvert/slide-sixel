@@ -73,14 +73,14 @@ func main() {
                 if currpage < pagenum-1 {
                     currpage += 1
                 }
-                fmt.Println()
+                fmt.Print("\r")
                 fmt.Print(string(pages[currpage].Bytes()))
 
             case "h":
                 if currpage > 0 {
                     currpage -= 1
                 }
-                fmt.Println()
+                fmt.Print("\r")
                 fmt.Print(string(pages[currpage].Bytes()))
         }
     }

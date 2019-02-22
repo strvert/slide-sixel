@@ -54,7 +54,7 @@ func main() {
     term.Init()
     defer term.LoadBefore()
     term.SetCanon()
-    term.SetEcho(true)
+    term.SetEcho(false)
     reader := bufio.NewReader(os.Stdin)
 
     currpage := 0

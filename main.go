@@ -15,10 +15,12 @@ func main() {
         dirname string
         sixupdate bool
         slidewidth uint
+        fullscreen bool
     )
     flag.StringVar(&dirname, "d", "0", "slide directory")
     flag.BoolVar(&sixupdate, "u", false, "update saves for six image")
     flag.UintVar(&slidewidth, "s", 0, "set width for slide width")
+    flag.BoolVar(&fullscreen, "f", false, "fullscreen")
     flag.Parse()
     if dirname == "0" {
         fmt.Println(fmt.Errorf("Please set slide directory."))
@@ -26,14 +28,17 @@ func main() {
     }
 
     var cs termutil.CtrlSeqs
+    width := uint(300)
 
-    _, width, err := cs.GetWindowSize()
-    if err != nil {
-        panic(err)
-    }
     if slidewidth != 0 {
         width = uint(slidewidth)
         sixupdate = !true
+    } else {
+        _, width, _ = cs.GetWindowSize()
+    }
+    if fullscreen {
+        cs.ToggleFullScreen()
+        defer cs.ToggleFullScreen()
     }
 
     filenames, save, err := util.GetFileNames(dirname)

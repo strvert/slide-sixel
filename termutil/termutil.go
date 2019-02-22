@@ -97,3 +97,7 @@ func (ctr *CtrlSeqs) ClearScreen() {
     fmt.Print("\x1b[2J")
     fmt.Print("\x1b[H")
 }
+
+func (ctr *CtrlSeqs) ToggleFullScreen() {
+    fmt.Print("\x1b[10;2;t")
+}

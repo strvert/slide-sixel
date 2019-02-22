@@ -23,8 +23,8 @@ func (term *Termutil) Init() error {
     return nil
 }
 
-func (term *Termutil) SetCanon() error {
-    term.curterm.LFlag ^= termios.ICANON
+func (term *Termutil) SetUncanon() error {
+    term.curterm.LFlag &^= termios.ICANON
     if err := term.curterm.SetAttr(termios.Stdin, termios.TCSANOW); err != nil {
         return err
     }
@@ -32,13 +32,6 @@ func (term *Termutil) SetCanon() error {
 }
 
 func (term *Termutil) LoadBefore() error {
-    if err := term.defterm.SetAttr(termios.Stdin, termios.TCSANOW); err != nil {
-        return err
-    }
-    return nil
-}
-
-func (term *Termutil) SetUncanon() error {
     if err := term.defterm.SetAttr(termios.Stdin, termios.TCSANOW); err != nil {
         return err
     }
@@ -69,7 +62,7 @@ type CtrlSeqs struct {}
 func (ctr *CtrlSeqs) GetWindowSize() (uint, uint, error) {
     var term Termutil
     term.Init()
-    term.SetCanon()
+    term.SetUncanon() // 非カノニカルモードに
     term.SetEcho(true)
 
     fmt.Print("\x1b[14;;t")

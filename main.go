@@ -58,7 +58,7 @@ func main() {
     var term termutil.Termutil
     term.Init()
     defer term.LoadBefore()
-    term.SetCanon()
+    term.SetUncanon()
     term.SetEcho(false)
     reader := bufio.NewReader(os.Stdin)
 

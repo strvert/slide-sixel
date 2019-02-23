@@ -119,7 +119,7 @@ func LoadPages(filenames []string, dirname string, width uint, save bool) ([]*by
             height := uint((float64(width)/float64(sizes[i][1]))*float64(sizes[i][0]))
             img = resize.Resize(width, height, img, resize.NearestNeighbor)
             sixel.NewEncoder(pages[i]).Encode(img)
-            name := fmt.Sprintf("%s/sixel_image/%d.six", dirname, i)
+            name := fmt.Sprintf("%s/sixel_image/slide_%d.six", dirname, i)
             newfile, err := os.Create(name)
             if err != nil {
                 return nil, 0, err
